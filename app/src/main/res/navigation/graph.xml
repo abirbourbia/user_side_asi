@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/graph">
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/graph"
+    app:startDestination="@id/createSignalementFragment">
 
+    <fragment
+        android:id="@+id/createSignalementFragment"
+        android:name="com.example.userside.CreateSignalementFragment"
+        android:label="fragment_create_signalement"
+        tools:layout="@layout/fragment_create_signalement" />
 </navigation>
