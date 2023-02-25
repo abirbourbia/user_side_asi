@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/graph"
+
     app:startDestination="@id/home2">
     <fragment
         android:id="@+id/home2"
@@ -18,4 +19,10 @@
         android:name="com.example.userside.messageVocale"
         android:label="fragment_message_vocale"
         tools:layout="@layout/fragment_message_vocale" />
+  
+    <fragment
+        android:id="@+id/createSignalementFragment"
+        android:name="com.example.userside.CreateSignalementFragment"
+        android:label="fragment_create_signalement"
+        tools:layout="@layout/fragment_create_signalement" />
 </navigation>
