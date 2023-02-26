@@ -33,9 +33,6 @@ class HomeFragment : Fragment() {
             findNavController().navigate(R.id.action_home_to_messageVocale)
         }
 
-        binding.faqImageButton.setOnClickListener {
-            findNavController().navigate(R.id.action_homeFragment_to_signalementsFragment)
-        }
 
         return view
     }
