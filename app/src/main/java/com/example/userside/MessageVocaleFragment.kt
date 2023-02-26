@@ -3,22 +3,25 @@ package com.example.userside
 import android.Manifest
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
+import android.os.Build
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import com.example.userside.databinding.FragmentMessageVocaleBinding
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import java.io.File
 import okhttp3.RequestBody
+import java.io.File
+
 
 @Suppress("DEPRECATION")
 class MessageVocaleFragment : Fragment() {
@@ -31,6 +34,7 @@ class MessageVocaleFragment : Fragment() {
     private lateinit var counter : TextView
 
 
+    @RequiresApi(Build.VERSION_CODES.P)
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -76,12 +80,16 @@ class MessageVocaleFragment : Fragment() {
                 voice_recorder.background = ContextCompat.getDrawable(requireContext(), R.drawable.round_button_off)
                 voice_recorder.setImageResource(R.drawable.voice)
                 stopRecording()
-                val audioFile = File(output)
-                val audioRequestBody = RequestBody.create("audio/*".toMediaTypeOrNull(), audioFile)
-                val audioPart = MultipartBody.Part.createFormData("audioFile", audioFile.name, audioRequestBody)
-                println("lets checccccccckkkkkkk "+audioPart)
-
+                println("ooooooo "+output)
             }
+        }
+
+        binding.button2.setOnClickListener {
+            val audioFile = File(output)
+            val audioRequestBody = RequestBody.create("audio/*".toMediaTypeOrNull(), audioFile)
+            val audioPart = MultipartBody.Part.createFormData("audioFile", audioFile.name, audioRequestBody)
+            println("lets checccccccckkkkkkk "+audioPart)
+
         }
         return view
     }

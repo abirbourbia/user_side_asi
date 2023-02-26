@@ -14,6 +14,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.Toast
 import android.widget.VideoView
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
@@ -23,6 +24,19 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.example.userside.databinding.FragmentCreateSignalementBinding
+import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 
 
 class CreateSignalementFragment : Fragment() {
@@ -37,7 +51,11 @@ class CreateSignalementFragment : Fragment() {
     private lateinit var activityResultLauncher1: ActivityResultLauncher<Intent>
     private lateinit var activityResultLauncher2: ActivityResultLauncher<Intent>
     lateinit var imageBitmap: Bitmap
+    lateinit var image_body: MultipartBody.Part
+    lateinit var userBody: MultipartBody.Part
+    var filetype =""
     val requestCode = 400
+    var intent_video: Uri? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -63,6 +81,9 @@ class CreateSignalementFragment : Fragment() {
             {
                 imageBitmap = intent.extras?.get("data") as Bitmap
                 image.setImageBitmap(imageBitmap)
+                image.visibility = View.VISIBLE
+                video.visibility = View.INVISIBLE
+                filetype = "image"
             }
         }
         // code to upload the image from the gallery
@@ -80,6 +101,7 @@ class CreateSignalementFragment : Fragment() {
                 image.setImageBitmap(imageBitmap)
                 image.visibility = View.VISIBLE
                 video.visibility = View.INVISIBLE
+                filetype = "image"
             }
         }
 
@@ -100,14 +122,18 @@ class CreateSignalementFragment : Fragment() {
 
         // Code to upload the video from the gallery
         activityResultLauncher2 = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-            val intent = result.data
+            val intent = result?.data
             if (result.resultCode == AppCompatActivity.RESULT_OK && intent != null) {
                 val selectedVideoUri = intent.data
+                if (selectedVideoUri != null) {
+                    intent_video = selectedVideoUri
+                }
                 video.setVideoURI(selectedVideoUri)
                 video.requestFocus()
                 video.start()
                 video.visibility = View.VISIBLE
                 image.visibility = View.INVISIBLE
+                filetype = "video"
             }
         }
 
@@ -120,8 +146,61 @@ class CreateSignalementFragment : Fragment() {
                 checkPermission()
             }
         }
+        binding.buttonEnvoyer.setOnClickListener {
+
+            when (filetype) {
+                "video" -> {
+                    Toast.makeText(requireContext(), "Mazal matkhadmtch", Toast.LENGTH_SHORT).show()
+                    /*
+                    val videoFile =File(intent_video?.path)
+                    println("fffffff "+ videoFile)
+                    val videoRequestBody = videoFile.asRequestBody("video/*".toMediaTypeOrNull())
+                    println("fffffff "+ videoFile.name)
+                    println("fffffff "+ videoFile.path)
+
+                    val vFile = MultipartBody.Part.createFormData("video", videoFile.name, videoRequestBody)
+                    println("fffffff "+ vFile)*/*/
+
+                /*
+                    uploadMedia(vFile)*/
+                }
+                "image" -> {
+                    val filesDir = requireContext().getFilesDir()
+                    val file = File(filesDir, "image" + ".png")
+                    val bos = ByteArrayOutputStream()
+                    imageBitmap.compress(Bitmap.CompressFormat.PNG, 0, bos)
+                    val bitmapdata = bos.toByteArray()
+                    val fos = FileOutputStream(file)
+                    fos.write(bitmapdata)
+                    fos.flush()
+                    fos.close()
+                    val reqFile = RequestBody.create("image/*".toMediaTypeOrNull(), file)
+                    image_body = MultipartBody.Part.createFormData("image", file.getName(), reqFile)
+                    //userBody =  MultipartBody.Part.createFormData("user", Gson().toJson(data))
+                    //binding.progressBar.visibility = View.VISIBLE
+                    uploadMedia(image_body)
+                }
+                "" -> {
+                    Toast.makeText(requireContext(), "Pas d'image ou video insere", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
 
         return view
+    }
+
+    private fun uploadMedia(imageBody: MultipartBody.Part) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val response =  RetrofitService.endpoint.uploadMedia(imageBody)
+            withContext(Dispatchers.Main) {
+                if(response.isSuccessful) {
+                    Toast.makeText(requireActivity(),"Signalement est effectuee, merci pour votre collaboration",Toast.LENGTH_SHORT).show()
+                }
+                else {
+                    Toast.makeText(requireActivity(),"Une erreur s'est produite",Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     // Take a picture launching camera 1
