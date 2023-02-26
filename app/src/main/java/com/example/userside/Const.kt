@@ -1,3 +1,3 @@
 package com.example.userside
 
-const val url ="https://a957-129-45-23-210.eu.ngrok.io/"
+const val url ="https://ce53-105-235-130-131.eu.ngrok.io/"

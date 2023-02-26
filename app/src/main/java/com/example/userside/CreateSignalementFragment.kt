@@ -1,11 +1,11 @@
 package com.example.userside
 
 import android.Manifest
+import android.app.Activity.RESULT_OK
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
-import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -29,11 +29,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
-import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -52,7 +50,7 @@ class CreateSignalementFragment : Fragment() {
     private lateinit var activityResultLauncher2: ActivityResultLauncher<Intent>
     lateinit var imageBitmap: Bitmap
     lateinit var image_body: MultipartBody.Part
-    lateinit var userBody: MultipartBody.Part
+    lateinit var alertBody: MultipartBody.Part
     var filetype =""
     val requestCode = 400
     var intent_video: Uri? = null
@@ -121,7 +119,7 @@ class CreateSignalementFragment : Fragment() {
         }
 
         // Code to upload the video from the gallery
-        activityResultLauncher2 = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+        /*activityResultLauncher2 = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             val intent = result?.data
             if (result.resultCode == AppCompatActivity.RESULT_OK && intent != null) {
                 val selectedVideoUri = intent.data
@@ -135,7 +133,25 @@ class CreateSignalementFragment : Fragment() {
                 image.visibility = View.INVISIBLE
                 filetype = "video"
             }
-        }
+        }*/
+
+        activityResultLauncher2 =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+                val intent = result.data
+                if (result.resultCode == RESULT_OK && intent != null) {
+                    val selectedVideoUri = intent.getData()
+                    intent_video = selectedVideoUri
+                    video.setVideoURI(selectedVideoUri)
+                    video.requestFocus()
+                    video.start()
+                    video.visibility = View.VISIBLE
+                    /*val user = User("test", "test")
+                    val userBody = MultipartBody.Part.createFormData("data", Gson().toJson(user))*/
+
+                    filetype = "video"
+
+                }
+            }
 
         // Code to upload the video from the camera
         btn_upload_video.setOnClickListener {
@@ -150,7 +166,7 @@ class CreateSignalementFragment : Fragment() {
 
             when (filetype) {
                 "video" -> {
-                    Toast.makeText(requireContext(), "Mazal matkhadmtch", Toast.LENGTH_SHORT).show()
+                    //Toast.makeText(requireContext(), "Mazal matkhadmtch", Toast.LENGTH_SHORT).show()
                     /*
                     val videoFile =File(intent_video?.path)
                     println("fffffff "+ videoFile)
@@ -163,8 +179,31 @@ class CreateSignalementFragment : Fragment() {
 
                 /*
                     uploadMedia(vFile)*/
+                    val telephone = binding.editTextTextPhone.text.toString()
+                    val userlocation = binding.editTextTextUserLocation.text.toString()
+                    val alertlocation = binding.editTextTextAlertLocation.text.toString()
+                    val data: HashMap<String, String> = HashMap()
+                    data.put("phone",telephone)
+                    data.put("userlocation",userlocation)
+                    data.put("alertlocation",alertlocation)
+
+                    val path = FileHelper.getRealPathFromURI(requireContext(),intent_video)
+                    val file = File(path)
+                    val reqFile = RequestBody.create("*/*".toMediaTypeOrNull(), file)
+                    val image = MultipartBody.Part.createFormData("video", file.name, reqFile)
+                    alertBody =  MultipartBody.Part.createFormData("data", Gson().toJson(data))
+                    binding.progressBar.visibility = View.VISIBLE
+                    uploadVideo(image,alertBody)
                 }
                 "image" -> {
+                    val telephone = binding.editTextTextPhone.text.toString()
+                    val userlocation = binding.editTextTextUserLocation.text.toString()
+                    val alertlocation = binding.editTextTextAlertLocation.text.toString()
+                    val data: HashMap<String, String> = HashMap()
+                    data.put("phone",telephone)
+                    data.put("userlocation",userlocation)
+                    data.put("alertlocation",alertlocation)
+
                     val filesDir = requireContext().getFilesDir()
                     val file = File(filesDir, "image" + ".png")
                     val bos = ByteArrayOutputStream()
@@ -176,9 +215,9 @@ class CreateSignalementFragment : Fragment() {
                     fos.close()
                     val reqFile = RequestBody.create("image/*".toMediaTypeOrNull(), file)
                     image_body = MultipartBody.Part.createFormData("image", file.getName(), reqFile)
-                    //userBody =  MultipartBody.Part.createFormData("user", Gson().toJson(data))
-                    //binding.progressBar.visibility = View.VISIBLE
-                    uploadMedia(image_body)
+                    alertBody =  MultipartBody.Part.createFormData("data", Gson().toJson(data))
+                    binding.progressBar.visibility = View.VISIBLE
+                    uploadMedia(image_body,alertBody)
                 }
                 "" -> {
                     Toast.makeText(requireContext(), "Pas d'image ou video insere", Toast.LENGTH_SHORT).show()
@@ -189,10 +228,31 @@ class CreateSignalementFragment : Fragment() {
         return view
     }
 
-    private fun uploadMedia(imageBody: MultipartBody.Part) {
+    private fun uploadVideo(image: MultipartBody.Part, alertBody: MultipartBody.Part) {
+        binding.buttonEnvoyer.isEnabled = false
         CoroutineScope(Dispatchers.IO).launch {
-            val response =  RetrofitService.endpoint.uploadMedia(imageBody)
+            val response = RetrofitService.endpoint.uploadVideo(image,alertBody)
             withContext(Dispatchers.Main) {
+                binding.buttonEnvoyer.isEnabled = true
+                binding.progressBar.visibility = View.INVISIBLE
+                if (response.isSuccessful) {
+                    Toast.makeText(requireActivity(),"Signalement est effectuee, merci pour votre collaboration",Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(requireActivity(),"Une erreur s'est produite",Toast.LENGTH_SHORT).show()
+                }
+
+
+            }
+
+
+        }
+    }
+
+    private fun uploadMedia(imageBody: MultipartBody.Part, alertBody: MultipartBody.Part) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val response =  RetrofitService.endpoint.uploadMedia(imageBody,alertBody)
+            withContext(Dispatchers.Main) {
+                binding.progressBar.visibility = View.INVISIBLE
                 if(response.isSuccessful) {
                     Toast.makeText(requireActivity(),"Signalement est effectuee, merci pour votre collaboration",Toast.LENGTH_SHORT).show()
                 }

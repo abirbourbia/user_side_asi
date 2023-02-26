@@ -16,7 +16,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.example.userside.databinding.FragmentMessageVocaleBinding
-import okhttp3.MediaType
+import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -32,6 +36,7 @@ class MessageVocaleFragment : Fragment() {
     private lateinit var binding : FragmentMessageVocaleBinding
     private lateinit var voice_recorder : ImageButton
     private lateinit var counter : TextView
+    lateinit var alertBody: MultipartBody.Part
 
 
     @RequiresApi(Build.VERSION_CODES.P)
@@ -60,6 +65,7 @@ class MessageVocaleFragment : Fragment() {
         voice_recorder.background = ContextCompat.getDrawable(requireContext(), R.drawable.round_button_off)
         counter = binding.counter
 
+        binding.button2.isEnabled = false
         voice_recorder.setOnClickListener{
             if (recorder == 0)
             {
@@ -81,17 +87,46 @@ class MessageVocaleFragment : Fragment() {
                 voice_recorder.setImageResource(R.drawable.voice)
                 stopRecording()
                 println("ooooooo "+output)
+                binding.button2.isEnabled = true
             }
         }
 
         binding.button2.setOnClickListener {
+            val telephone = binding.editTextTextPhone.text.toString()
+            val userlocation = binding.editTextTextUserLocation.text.toString()
+            val alertlocation = binding.editTextTextAlertLocation.text.toString()
+            val data: HashMap<String, String> = HashMap()
+            data.put("phone",telephone)
+            data.put("userlocation",userlocation)
+            data.put("alertlocation",alertlocation)
+
             val audioFile = File(output)
             val audioRequestBody = RequestBody.create("audio/*".toMediaTypeOrNull(), audioFile)
-            val audioPart = MultipartBody.Part.createFormData("audioFile", audioFile.name, audioRequestBody)
-            println("lets checccccccckkkkkkk "+audioPart)
+            val audioPart = MultipartBody.Part.createFormData("vocal", audioFile.name, audioRequestBody)
+            alertBody =  MultipartBody.Part.createFormData("data", Gson().toJson(data))
 
+            binding.progressBar2.visibility = View.VISIBLE
+            uploadVocal(audioPart,alertBody)
+            output = null
+            binding.button2.isEnabled = false
+            mediaRecorder = null
         }
         return view
+    }
+
+    private fun uploadVocal(imageBody: MultipartBody.Part, alertBody: MultipartBody.Part) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val response =  RetrofitService.endpoint.uploadVocal(imageBody,alertBody)
+            withContext(Dispatchers.Main) {
+                binding.progressBar2.visibility = View.INVISIBLE
+                if(response.isSuccessful) {
+                    Toast.makeText(requireActivity(),"Signalement est effectuee, merci pour votre collaboration",Toast.LENGTH_SHORT).show()
+                }
+                else {
+                    Toast.makeText(requireActivity(),"Une erreur s'est produite",Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     // function to start recording
@@ -105,10 +140,11 @@ class MessageVocaleFragment : Fragment() {
     // function to stop recording
     private fun stopRecording(){
         if(state){
-            println(output)
             mediaRecorder?.stop()
             mediaRecorder?.release()
             state = false
+            Toast.makeText(context, "recorded successfully", Toast.LENGTH_SHORT).show()
+
         }else{
             Toast.makeText(context, "You are not recording right now!", Toast.LENGTH_SHORT).show()
         }
